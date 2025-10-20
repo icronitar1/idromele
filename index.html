@@ -55,18 +55,36 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        details > summary {
-            list-style: none;
-            cursor: pointer;
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        details summary .arrow { transition: transform 0.2s; }
+        details[open] summary .arrow { transform: rotate(90deg); }
+        
+        /* Intensity Selector Styles */
+        .intensity-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            border-radius: 0.5rem;
+            background-color: #f1f5f9;
+            padding: 0.25rem;
+            gap: 0.25rem;
         }
-        details > summary::-webkit-details-marker {
+        .intensity-selector input {
             display: none;
         }
-        details summary .arrow {
-            transition: transform 0.2s;
+        .intensity-selector label {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            text-align: center;
+            font-weight: 500;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
         }
-        details[open] summary .arrow {
-            transform: rotate(90deg);
+        .intensity-selector input:checked + label {
+            background-color: white;
+            color: #2563eb;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
         }
     </style>
 </head>
@@ -83,11 +101,8 @@
         <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
              <label class="block text-lg font-semibold mb-2 text-slate-700">Carica un file (PDF, Word, TXT)</label>
             <div id="file-drop-zone" class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
-                <!-- ... (SVG and file input identical to previous version) ... -->
                 <div class="space-y-1 text-center">
-                    <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </svg>
+                    <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
                     <div class="flex text-sm text-slate-600">
                         <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
                             <span>Scegli un file</span>
@@ -108,7 +123,20 @@
             <label for="inputText" class="block text-lg font-semibold mb-2 text-slate-700">Incolla un testo breve</label>
             <textarea id="inputText" rows="6" class="w-full p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Incolla qui il testo..."></textarea>
             
-            <button id="generateBtn" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed" disabled>
+            <!-- Intensity Selector -->
+            <div class="mt-6">
+                 <label class="block text-lg font-semibold mb-3 text-slate-700">Livello di Approfondimento</label>
+                 <div id="intensity-selector" class="intensity-selector">
+                     <input type="radio" id="intensity-concise" name="intensity" value="concise">
+                     <label for="intensity-concise">Sintetico</label>
+                     <input type="radio" id="intensity-standard" name="intensity" value="standard" checked>
+                     <label for="intensity-standard">Standard</label>
+                     <input type="radio" id="intensity-thorough" name="intensity" value="thorough">
+                     <label for="intensity-thorough">Approfondito</label>
+                 </div>
+            </div>
+
+            <button id="generateBtn" class="mt-6 w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed" disabled>
                 Crea il Mio Study Kit
             </button>
         </div>
@@ -201,9 +229,6 @@
                 inputText.disabled = false;
             }
         }
-
-        async function extractTextFromPdf(file) { /* ... identical to previous version ... */ return "extracted text"; }
-        async function extractTextFromDocx(file) { /* ... identical to previous version ... */ return "extracted text"; }
         
         inputText.addEventListener('input', () => {
             sourceText = ''; // Clear file source if user types manually
@@ -216,6 +241,8 @@
             const text = sourceText || inputText.value.trim();
             if (!text) return;
 
+            const intensity = document.querySelector('input[name="intensity"]:checked').value;
+
             // Reset UI
             outputContainer.classList.add('hidden');
             errorMessage.classList.add('hidden');
@@ -225,13 +252,13 @@
             try {
                 const textChunks = chunkText(text, 15000);
                 for (let i = 0; i < textChunks.length; i++) {
-                    loadingStatus.textContent = `L'AI sta analizzando la sezione ${i + 1} di ${textChunks.length}...`;
+                    loadingStatus.textContent = `L'AI sta analizzando la sezione ${i + 1} di ${textChunks.length}... (Modalità: ${intensity})`;
                     const chunk = textChunks[i];
                     
                     const [summaryResult, flashcardsResult, quizResult] = await Promise.all([
-                        fetchWithRetry(createPayload(chunk, 'summary')),
-                        fetchWithRetry(createPayload(chunk, 'flashcards')),
-                        fetchWithRetry(createPayload(chunk, 'quiz'))
+                        fetchWithRetry(createPayload(chunk, 'summary', intensity)),
+                        fetchWithRetry(createPayload(chunk, 'flashcards', intensity)),
+                        fetchWithRetry(createPayload(chunk, 'quiz', intensity))
                     ]);
 
                     generatedData.push({
@@ -252,35 +279,50 @@
             }
         });
         
-        function chunkText(text, maxSize) { /* ... identical to previous version ... */ return ["chunk1", "chunk2"]; }
-        function createPayload(text, type) { /* ... identical to previous version ... */ return {}; }
-        async function fetchWithRetry(payload, maxRetries = 3) { /* ... identical to previous version ... */ return {}; }
+        function createPayload(text, type, intensity) {
+            const prompts = {
+                summary: {
+                    concise: `Basandoti su questo testo, genera 2 domande di riepilogo essenziali con risposte brevissime. Testo: \n\n${text}`,
+                    standard: `Basandoti su questo testo, genera 3 domande di riepilogo approfondite con risposte concise. Testo: \n\n${text}`,
+                    thorough: `Basandoti su questo testo, genera 10 domande di riepilogo estremamente dettagliate, coprendo anche i particolari, con risposte esaustive. Testo: \n\n${text}`
+                },
+                flashcards: {
+                    concise: `Crea 3 flashcard fondamentali da questo testo. Ogni flashcard deve avere un "fronte" e un "retro". Testo: \n\n${text}`,
+                    standard: `Crea 5 flashcard da questo testo. Ogni flashcard deve avere un "fronte" e un "retro". Testo: \n\n${text}`,
+                    thorough: `Crea 15 flashcard da questo testo, includendo termini specifici e definizioni precise. Ogni flashcard deve avere un "fronte" e un "retro". Testo: \n\n${text}`
+                },
+                quiz: {
+                    concise: `Genera 2 domande a scelta multipla sui concetti chiave di questo testo. Per ogni domanda, crea 4 opzioni (una corretta) e indica la risposta. Testo: \n\n${text}`,
+                    standard: `Genera 3 domande a scelta multipla da questo testo. Per ogni domanda, crea 4 opzioni (una corretta) e indica la risposta. Testo: \n\n${text}`,
+                    thorough: `Genera 10 domande a scelta multipla da questo testo, anche su dettagli specifici e sfumature. Per ogni domanda, crea 4 opzioni (una corretta) e indica la risposta. Testo: \n\n${text}`
+                }
+            };
+
+            const schemas = {
+                summary: { type: "ARRAY", items: { type: "OBJECT", properties: { domanda: { type: "STRING" }, risposta: { type: "STRING" } } } },
+                flashcards: { type: "ARRAY", items: { type: "OBJECT", properties: { fronte: { type: "STRING" }, retro: { type: "STRING" } } } },
+                quiz: { type: "ARRAY", items: { type: "OBJECT", properties: { domanda: { type: "STRING" }, opzioni: { type: "ARRAY", items: { type: "STRING" } }, risposta_corretta: { type: "STRING" } } } }
+            };
+            
+            return {
+                contents: [{ parts: [{ text: prompts[type][intensity] }] }],
+                generationConfig: { responseMimeType: "application/json", responseSchema: schemas[type] }
+            };
+        }
 
         // --- Tab and Rendering Logic ---
         tabButtons.forEach(button => button.addEventListener('click', () => activateTab(button.dataset.tab)));
 
         function activateTab(targetTab) {
-            // Gestisce lo stile dei pulsanti dei tab
             tabButtons.forEach(btn => {
-                if (btn.dataset.tab === targetTab) {
-                    btn.classList.add('active-tab', 'text-blue-600', 'border-blue-600', 'border-b-2');
-                    btn.classList.remove('text-slate-500');
-                } else {
-                    btn.classList.remove('active-tab', 'text-blue-600', 'border-blue-600', 'border-b-2');
-                    btn.classList.add('text-slate-500');
-                }
+                btn.classList.toggle('active-tab', btn.dataset.tab === targetTab);
+                btn.classList.toggle('text-blue-600', btn.dataset.tab === targetTab);
+                btn.classList.toggle('border-blue-600', btn.dataset.tab === targetTab);
+                btn.classList.toggle('border-b-2', btn.dataset.tab === targetTab);
+                btn.classList.toggle('text-slate-500', btn.dataset.tab !== targetTab);
             });
+            tabContents.forEach(content => content.classList.toggle('hidden', content.id !== targetTab));
             
-            // Mostra il pannello del contenuto corretto e nasconde gli altri
-            tabContents.forEach(content => {
-                if (content.id === targetTab) {
-                    content.classList.remove('hidden');
-                } else {
-                    content.classList.add('hidden');
-                }
-            });
-
-            // Esegue il rendering del contenuto del tab attivo
             if (targetTab === 'summary') renderSummary();
             if (targetTab === 'flashcards') renderFlashcards();
             if (targetTab === 'quiz') renderQuiz();
@@ -303,64 +345,30 @@
             `;
             const content = document.getElementById('summary-content');
             generatedData.forEach(chunk => {
-                const details = document.createElement('details');
-                details.className = 'bg-slate-50 border border-slate-200 rounded-lg';
-                details.innerHTML = `
-                    <summary class="p-4 font-semibold text-lg flex justify-between items-center">
-                        Sezione ${chunk.chunkNumber}
-                        <span class="arrow text-blue-500">&#9654;</span>
-                    </summary>
-                    <div class="p-4 border-t border-slate-200 space-y-4">
-                        ${chunk.summary.map(item => `
-                            <div>
-                                <h4 class="font-semibold text-slate-700">${item.domanda}</h4>
-                                <p class="mt-1 text-slate-600">${item.risposta}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-                content.appendChild(details);
+                if (chunk.summary.length > 0) {
+                    const details = document.createElement('details');
+                    details.className = 'bg-slate-50 border border-slate-200 rounded-lg';
+                    details.innerHTML = `
+                        <summary class="p-4 font-semibold text-lg flex justify-between items-center">
+                            Sezione ${chunk.chunkNumber}
+                            <span class="arrow text-blue-500">&#9654;</span>
+                        </summary>
+                        <div class="p-4 border-t border-slate-200 space-y-4">
+                            ${chunk.summary.map(item => `
+                                <div>
+                                    <h4 class="font-semibold text-slate-700">${item.domanda}</h4>
+                                    <p class="mt-1 text-slate-600">${item.risposta}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    content.appendChild(details);
+                }
             });
             document.getElementById('downloadPdfBtn').addEventListener('click', generateSummaryPdf);
         }
 
-        function generateSummaryPdf() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            let yPos = 20;
-            const pageHeight = doc.internal.pageSize.height;
-            const margin = 15;
-
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.text('AI Study Kit - Riepilogo Domande', margin, yPos);
-            yPos += 15;
-
-            generatedData.forEach(chunk => {
-                if (yPos > pageHeight - 30) { doc.addPage(); yPos = margin; }
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(14);
-                doc.text(`Sezione ${chunk.chunkNumber}`, margin, yPos);
-                yPos += 10;
-                
-                chunk.summary.forEach(item => {
-                    doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(11);
-                    const questionLines = doc.splitTextToSize(`D: ${item.domanda}`, 180);
-                    doc.text(questionLines, margin, yPos);
-                    yPos += (questionLines.length * 5);
-                    
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(10);
-                    const answerLines = doc.splitTextToSize(`R: ${item.risposta}`, 175);
-                    doc.text(answerLines, margin + 5, yPos);
-                    yPos += (answerLines.length * 5) + 5;
-                    
-                    if (yPos > pageHeight - 20) { doc.addPage(); yPos = margin; }
-                });
-            });
-            doc.save('riepilogo-studio.pdf');
-        }
+        function generateSummaryPdf() { /* ... identical to previous version ... */ }
 
         function renderFlashcards() {
              const container = document.getElementById('flashcards');
@@ -368,112 +376,41 @@
              container.innerHTML = `<h2 class="text-2xl font-bold mb-6 text-slate-800">Flashcard per Sezioni</h2><div id="flashcards-content" class="space-y-6"></div>`;
              const content = document.getElementById('flashcards-content');
              generatedData.forEach(chunk => {
-                const sectionDiv = document.createElement('div');
-                sectionDiv.innerHTML = `<h3 class="text-xl font-semibold mb-4">Sezione ${chunk.chunkNumber}</h3>`;
-                const grid = document.createElement('div');
-                grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
-                chunk.flashcards.forEach(cardData => {
-                    const card = document.createElement('div');
-                    card.className = 'flashcard-container';
-                    card.innerHTML = `
-                        <div class="flashcard">
-                            <div class="flashcard-face flashcard-front"><p class="text-lg font-medium">${cardData.fronte}</p></div>
-                            <div class="flashcard-face flashcard-back"><p class="text-md">${cardData.retro}</p></div>
-                        </div>`;
-                    card.querySelector('.flashcard').addEventListener('click', function() { this.classList.toggle('is-flipped'); });
-                    grid.appendChild(card);
-                });
-                sectionDiv.appendChild(grid);
-                content.appendChild(sectionDiv);
+                if(chunk.flashcards.length > 0) {
+                    const sectionDiv = document.createElement('div');
+                    sectionDiv.innerHTML = `<h3 class="text-xl font-semibold mb-4">Sezione ${chunk.chunkNumber}</h3>`;
+                    const grid = document.createElement('div');
+                    grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+                    chunk.flashcards.forEach(cardData => {
+                        const card = document.createElement('div');
+                        card.className = 'flashcard-container';
+                        card.innerHTML = `
+                            <div class="flashcard">
+                                <div class="flashcard-face flashcard-front"><p class="text-lg font-medium">${cardData.fronte}</p></div>
+                                <div class="flashcard-face flashcard-back"><p class="text-md">${cardData.retro}</p></div>
+                            </div>`;
+                        card.querySelector('.flashcard').addEventListener('click', function() { this.classList.toggle('is-flipped'); });
+                        grid.appendChild(card);
+                    });
+                    sectionDiv.appendChild(grid);
+                    content.appendChild(sectionDiv);
+                }
              });
         }
 
-        function renderQuiz() {
-            const container = document.getElementById('quiz');
-            if (generatedData.length === 0) { container.innerHTML = `<p class="text-slate-500">Nessun quiz generato.</p>`; return; }
-            container.innerHTML = `<div id="quiz-selection"></div><div id="quiz-runner" class="hidden"></div>`;
-            const selectionDiv = document.getElementById('quiz-selection');
-            selectionDiv.innerHTML = `<h2 class="text-2xl font-bold mb-4 text-center">Scegli un Quiz</h2><p class="text-center text-slate-500 mb-6">Ogni sezione del documento ha il suo quiz.</p>`;
-            const buttonGrid = document.createElement('div');
-            buttonGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
-            generatedData.forEach((chunk, index) => {
-                if (chunk.quiz.length > 0) {
-                    const button = document.createElement('button');
-                    button.className = 'p-4 bg-blue-100 text-blue-800 font-semibold rounded-lg hover:bg-blue-200 transition';
-                    button.textContent = `Inizia Quiz - Sezione ${chunk.chunkNumber} (${chunk.quiz.length} domande)`;
-                    button.onclick = () => startQuizRunner(index);
-                    buttonGrid.appendChild(button);
-                }
-            });
-            selectionDiv.appendChild(buttonGrid);
-        }
-        
+        function renderQuiz() { /* ... identical to previous version ... */ }
         let currentQuizData = [];
         let currentQuestionIndex = 0;
         let score = 0;
-
-        function startQuizRunner(chunkIndex) {
-            document.getElementById('quiz-selection').classList.add('hidden');
-            document.getElementById('quiz-runner').classList.remove('hidden');
-            currentQuizData = generatedData[chunkIndex].quiz;
-            currentQuestionIndex = 0;
-            score = 0;
-            displayQuestion();
-        }
-
-        function displayQuestion() {
-            const runner = document.getElementById('quiz-runner');
-            if (currentQuestionIndex >= currentQuizData.length) {
-                displayFinalScore();
-                return;
-            }
-            const q = currentQuizData[currentQuestionIndex];
-            const shuffledOptions = [...q.opzioni].sort(() => Math.random() - 0.5);
-            runner.innerHTML = `
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-slate-800">Quiz Interattivo</h2>
-                    <p class="text-slate-600 font-medium">Domanda ${currentQuestionIndex + 1}/${currentQuizData.length}</p>
-                </div>
-                <p class="text-lg font-semibold mb-6">${q.domanda}</p>
-                <div class="space-y-3">${shuffledOptions.map(opt => `<button class="quiz-option w-full text-left p-4 border rounded-lg hover:bg-slate-100" data-correct="${opt === q.risposta_corretta}">${opt}</button>`).join('')}</div>
-                <div id="quiz-feedback" class="mt-6 text-center"></div>`;
-            document.querySelectorAll('.quiz-option').forEach(opt => opt.addEventListener('click', checkAnswer));
-        }
-
-        function checkAnswer(e) {
-            if (e.target.dataset.correct === 'true') score++;
-            e.target.classList.add(e.target.dataset.correct === 'true' ? 'correct' : 'incorrect');
-            document.querySelectorAll('.quiz-option').forEach(opt => {
-                opt.classList.add('disabled');
-                if (opt.dataset.correct === 'true') opt.classList.add('correct');
-            });
-            const feedback = document.getElementById('quiz-feedback');
-            const nextBtn = document.createElement('button');
-            nextBtn.textContent = currentQuestionIndex < currentQuizData.length - 1 ? 'Prossima Domanda' : 'Vedi Risultati';
-            nextBtn.className = 'mt-4 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700';
-            nextBtn.onclick = () => { currentQuestionIndex++; displayQuestion(); };
-            feedback.appendChild(nextBtn);
-        }
-
-        function displayFinalScore() {
-            const runner = document.getElementById('quiz-runner');
-            const percentage = currentQuizData.length > 0 ? Math.round((score / currentQuizData.length) * 100) : 0;
-            runner.innerHTML = `
-                <div class="text-center">
-                    <h2 class="text-2xl font-bold mb-4">Quiz Completato!</h2>
-                    <p class="text-5xl font-bold text-blue-600 mb-6">${score}/${currentQuizData.length} (${percentage}%)</p>
-                    <button id="back-to-selection" class="bg-slate-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-800">Torna ai Quiz</button>
-                </div>`;
-            document.getElementById('back-to-selection').addEventListener('click', () => {
-                document.getElementById('quiz-selection').classList.remove('hidden');
-                document.getElementById('quiz-runner').classList.add('hidden');
-            });
-        }
+        function startQuizRunner(chunkIndex) { /* ... identical to previous version ... */ }
+        function displayQuestion() { /* ... identical to previous version ... */ }
+        function checkAnswer(e) { /* ... identical to previous version ... */ }
+        function displayFinalScore() { /* ... identical to previous version ... */ }
         
         // Initialize
         document.addEventListener('DOMContentLoaded', setupFileHandlers);
 
-        // --- Dummy functions to make copy-paste of unchanged code smaller ---
+        // --- Utility and data extraction functions ---
         async function extractTextFromPdf(file) {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -503,19 +440,6 @@
             }
             return chunks.filter(c => c.trim().length > 10);
         }
-        function createPayload(text, type) {
-            const prompts = {
-                summary: `Basandoti su QUESTA PARTE di un testo, genera 3 domande di riepilogo approfondite con risposte concise. Ecco il testo: \n\n${text}`,
-                flashcards: `Crea 5 flashcard da QUESTA PARTE di un testo. Ogni flashcard deve avere un "fronte" e un "retro". Ecco il testo: \n\n${text}`,
-                quiz: `Genera 3 domande a scelta multipla da QUESTA PARTE di un testo. Per ogni domanda, crea 4 opzioni (di cui una corretta) e indica la risposta. Ecco il testo: \n\n${text}`
-            };
-            const schemas = {
-                summary: { type: "ARRAY", items: { type: "OBJECT", properties: { domanda: { type: "STRING" }, risposta: { type: "STRING" } } } },
-                flashcards: { type: "ARRAY", items: { type: "OBJECT", properties: { fronte: { type: "STRING" }, retro: { type: "STRING" } } } },
-                quiz: { type: "ARRAY", items: { type: "OBJECT", properties: { domanda: { type: "STRING" }, opzioni: { type: "ARRAY", items: { type: "STRING" } }, risposta_corretta: { type: "STRING" } } } }
-            };
-            return { contents: [{ parts: [{ text: prompts[type] }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schemas[type] } };
-        }
         async function fetchWithRetry(payload, maxRetries = 3) {
             let attempt = 0;
             while (attempt < maxRetries) {
@@ -531,7 +455,125 @@
                 }
             }
         }
+        function generateSummaryPdf() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            let yPos = 20;
+            const pageHeight = doc.internal.pageSize.height;
+            const margin = 15;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.text('AI Study Kit - Riepilogo Domande', margin, yPos);
+            yPos += 15;
+
+            generatedData.forEach(chunk => {
+                if (chunk.summary.length > 0) {
+                    if (yPos > pageHeight - 30) { doc.addPage(); yPos = margin; }
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(14);
+                    doc.text(`Sezione ${chunk.chunkNumber}`, margin, yPos);
+                    yPos += 10;
+                    
+                    chunk.summary.forEach(item => {
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFontSize(11);
+                        const questionLines = doc.splitTextToSize(`D: ${item.domanda}`, 180);
+                        doc.text(questionLines, margin, yPos);
+                        yPos += (questionLines.length * 5);
+                        
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(10);
+                        const answerLines = doc.splitTextToSize(`R: ${item.risposta}`, 175);
+                        doc.text(answerLines, margin + 5, yPos);
+                        yPos += (answerLines.length * 5) + 5;
+                        
+                        if (yPos > pageHeight - 20) { doc.addPage(); yPos = margin; }
+                    });
+                }
+            });
+            doc.save('riepilogo-studio.pdf');
+        }
+        function renderQuiz() {
+            const container = document.getElementById('quiz');
+            if (generatedData.length === 0) { container.innerHTML = `<p class="text-slate-500">Nessun quiz generato.</p>`; return; }
+            container.innerHTML = `<div id="quiz-selection"></div><div id="quiz-runner" class="hidden"></div>`;
+            const selectionDiv = document.getElementById('quiz-selection');
+            selectionDiv.innerHTML = `<h2 class="text-2xl font-bold mb-4 text-center">Scegli un Quiz</h2><p class="text-center text-slate-500 mb-6">Ogni sezione del documento ha il suo quiz.</p>`;
+            const buttonGrid = document.createElement('div');
+            buttonGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+            let hasQuiz = false;
+            generatedData.forEach((chunk, index) => {
+                if (chunk.quiz.length > 0) {
+                    hasQuiz = true;
+                    const button = document.createElement('button');
+                    button.className = 'p-4 bg-blue-100 text-blue-800 font-semibold rounded-lg hover:bg-blue-200 transition';
+                    button.textContent = `Inizia Quiz - Sezione ${chunk.chunkNumber} (${chunk.quiz.length} domande)`;
+                    button.onclick = () => startQuizRunner(index);
+                    buttonGrid.appendChild(button);
+                }
+            });
+            if (!hasQuiz) {
+                selectionDiv.innerHTML += '<p class="text-center text-slate-500">Nessun quiz disponibile per questo materiale.</p>';
+            }
+            selectionDiv.appendChild(buttonGrid);
+        }
+        function startQuizRunner(chunkIndex) {
+            document.getElementById('quiz-selection').classList.add('hidden');
+            document.getElementById('quiz-runner').classList.remove('hidden');
+            currentQuizData = generatedData[chunkIndex].quiz;
+            currentQuestionIndex = 0;
+            score = 0;
+            displayQuestion();
+        }
+        function displayQuestion() {
+            const runner = document.getElementById('quiz-runner');
+            if (currentQuestionIndex >= currentQuizData.length) {
+                displayFinalScore();
+                return;
+            }
+            const q = currentQuizData[currentQuestionIndex];
+            const shuffledOptions = [...q.opzioni].sort(() => Math.random() - 0.5);
+            runner.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-800">Quiz Interattivo</h2>
+                    <p class="text-slate-600 font-medium">Domanda ${currentQuestionIndex + 1}/${currentQuizData.length}</p>
+                </div>
+                <p class="text-lg font-semibold mb-6">${q.domanda}</p>
+                <div class="space-y-3">${shuffledOptions.map(opt => `<button class="quiz-option w-full text-left p-4 border rounded-lg hover:bg-slate-100" data-correct="${opt === q.risposta_corretta}">${opt}</button>`).join('')}</div>
+                <div id="quiz-feedback" class="mt-6 text-center"></div>`;
+            document.querySelectorAll('.quiz-option').forEach(opt => opt.addEventListener('click', checkAnswer));
+        }
+        function checkAnswer(e) {
+            if (e.target.dataset.correct === 'true') score++;
+            e.target.classList.add(e.target.dataset.correct === 'true' ? 'correct' : 'incorrect');
+            document.querySelectorAll('.quiz-option').forEach(opt => {
+                opt.classList.add('disabled');
+                if (opt.dataset.correct === 'true') opt.classList.add('correct');
+            });
+            const feedback = document.getElementById('quiz-feedback');
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = currentQuestionIndex < currentQuizData.length - 1 ? 'Prossima Domanda' : 'Vedi Risultati';
+            nextBtn.className = 'mt-4 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700';
+            nextBtn.onclick = () => { currentQuestionIndex++; displayQuestion(); };
+            feedback.appendChild(nextBtn);
+        }
+        function displayFinalScore() {
+            const runner = document.getElementById('quiz-runner');
+            const percentage = currentQuizData.length > 0 ? Math.round((score / currentQuizData.length) * 100) : 0;
+            runner.innerHTML = `
+                <div class="text-center">
+                    <h2 class="text-2xl font-bold mb-4">Quiz Completato!</h2>
+                    <p class="text-5xl font-bold text-blue-600 mb-6">${score}/${currentQuizData.length} (${percentage}%)</p>
+                    <button id="back-to-selection" class="bg-slate-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-800">Torna ai Quiz</button>
+                </div>`;
+            document.getElementById('back-to-selection').addEventListener('click', () => {
+                document.getElementById('quiz-selection').classList.remove('hidden');
+                document.getElementById('quiz-runner').classList.add('hidden');
+            });
+        }
     </script>
 </body>
 </html>
+
 
